@@ -14,11 +14,13 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.example.diego.handwritingnotes.database.AppDatabase;
 import com.example.diego.handwritingnotes.database_interface.DaoAccess;
 import com.example.diego.handwritingnotes.database_orm.Document;
 import com.example.diego.handwritingnotes.layout_helpers.DocumentListAdapter;
+import com.example.diego.handwritingnotes.utils.APIManager;
 
 import java.text.Normalizer;
 import java.util.List;
@@ -52,7 +54,12 @@ public class IndexActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
-            // TODO: send image to Azure API
+            Toast.makeText(this, "Sending image to API", Toast.LENGTH_LONG).show();
+            APIManager apiManager = new APIManager();
+            apiManager.requestAPIProcess(imageBitmap);
+            //TODO Return API response
+            String text = apiManager.processAPIResponse();
+            //TODO save document text instance
         }
     }
 
