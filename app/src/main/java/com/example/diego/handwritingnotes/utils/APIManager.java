@@ -35,6 +35,7 @@ public class APIManager {
         return "Testo de la imagen";
     }
 
+
     public void requestAPIProcess(Bitmap image) {
         CloseableHttpClient httpTextClient = HttpClientBuilder.create().build();
         CloseableHttpClient httpResultClient = HttpClientBuilder.create().build();;

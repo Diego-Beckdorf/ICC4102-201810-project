@@ -14,6 +14,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.diego.handwritingnotes.database.AppDatabase;
@@ -40,6 +41,8 @@ public class IndexActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
+        getDocuments();
+
         Button addButton = findViewById(R.id.add);
         addButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -56,11 +59,27 @@ public class IndexActivity extends AppCompatActivity {
             Bitmap imageBitmap = (Bitmap) extras.get("data");
             Toast.makeText(this, "Sending image to API", Toast.LENGTH_LONG).show();
             APIManager apiManager = new APIManager();
-            apiManager.requestAPIProcess(imageBitmap);
+            //apiManager.requestAPIProcess(imageBitmap);
             //TODO Return API response
             String text = apiManager.processAPIResponse();
+            //Toast.makeText(this, text, Toast.LENGTH_LONG).show();
+            saveDocument(text);
+            getDocuments();
+
             //TODO save document text instance
         }
+    }
+
+    public void saveDocument(String text){
+        final String st = text;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                DaoAccess dao = appDatabase.daoAccess();
+                Document d = new Document(st, "01", "01");
+                dao.insertDocument(d);
+            }
+        }).start();
     }
 
     private void dispatchTakePictureIntent() {
