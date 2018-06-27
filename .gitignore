@@ -15,6 +15,7 @@ gen/
 out/
 
 # Gradle files
+.idea/
 .gradle/
 build/
 
@@ -64,3 +65,4 @@ fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
 fastlane/readme.md
+/.idea
