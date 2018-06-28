@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">HandWritingNotes</string>
+    <string name="title_activity_document">DocumentActivity</string>
+    <string name="document_save_btn">Save</string>
 </resources>

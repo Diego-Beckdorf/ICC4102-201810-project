@@ -58,16 +58,14 @@ public class IndexActivity extends AppCompatActivity {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
             Toast.makeText(this, "Sending image to API", Toast.LENGTH_LONG).show();
+            //TODO async task required
             APIManager apiManager = new APIManager();
             //apiManager.requestAPIProcess(imageBitmap);
-            //TODO Return API response
+            //TODO parse API response
             String text = apiManager.processAPIResponse();
-            //Toast.makeText(this, text, Toast.LENGTH_LONG).show();
             saveDocument(text);
-            getDocuments();
-
-            //TODO save document text instance
         }
+        getDocuments();
     }
 
     public void saveDocument(String text){
