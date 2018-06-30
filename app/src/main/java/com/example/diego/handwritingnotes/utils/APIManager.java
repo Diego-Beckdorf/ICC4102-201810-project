@@ -100,7 +100,7 @@ public class APIManager {
             // recognition is an asynchronous operation, which takes a variable
             // amount of time dependent on the length of the text analyzed. You
             // may need to wait or retry the Get operation.
-
+            //TODO set service to retrieve the text and notify user
             System.out.println("\nHandwritten text submitted.\n" +
                     "Waiting 10 seconds to retrieve the recognized text.\n");
             Thread.sleep(10000);
