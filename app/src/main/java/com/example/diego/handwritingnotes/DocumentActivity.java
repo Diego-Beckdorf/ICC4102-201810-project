@@ -27,6 +27,8 @@ public class DocumentActivity extends AppCompatActivity {
     private static final String DATABASE_NAME = "app_db";
     private AppDatabase appDatabase;
 
+    private Document doc;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,13 +48,35 @@ public class DocumentActivity extends AppCompatActivity {
 
         final EditText title_doc = (EditText) findViewById(R.id.document_title);
 
+        final int doc_id = getIntent().getIntExtra("doc_id", -1);
+        if (doc_id != -1){
+            getDocument(doc_id);
+        }
+
         Button saveButton = findViewById(R.id.document_save_btn);
         saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                final DateFormat df = new SimpleDateFormat("dd-MM-yyyy");
+
                 String text_content = content.getText().toString();
                 String text_title = title_doc.getText().toString();
-                saveDocument(text_content, text_title);
+
+                final String date = df.format(Calendar.getInstance().getTime());
+
+                if (doc_id != -1){
+                    updateDocument(doc_id, text_content, text_title, date);
+                } else {
+                    saveDocument(text_content, text_title, date);
+                }
+                indexCall();
+            }
+        });
+
+        Button cancelButton = findViewById(R.id.document_cancel_button);
+        cancelButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
                 indexCall();
             }
         });
@@ -68,16 +92,44 @@ public class DocumentActivity extends AppCompatActivity {
         });
     }
 
-    public void saveDocument(String text, final String title){
-        final DateFormat df = new SimpleDateFormat("dd-MM-yyyy");
+    public void getDocument(final int doc_id){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                EditText content = (EditText) findViewById(R.id.document_content);
+                EditText title_doc = (EditText) findViewById(R.id.document_title);
+
+                doc = appDatabase.daoAccess().getDocument(doc_id);
+                content.setText(doc.getStoragePath());
+                title_doc.setText(doc.getName());
+            }
+        }).start();
+    }
+
+    public void saveDocument(String text, final String title, final String date){
         final String st = text;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                String date = df.format(Calendar.getInstance().getTime());
                 DaoAccess dao = appDatabase.daoAccess();
                 Document d = new Document(title, st, date);
                 dao.insertDocument(d);
+            }
+        }).start();
+    }
+
+    public void updateDocument(final int doc_id, final String text, final String title, final String date){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                DaoAccess dao = appDatabase.daoAccess();
+
+                Document doc = dao.getDocument(doc_id);
+                doc.setName(title);
+                doc.setCreatedAt(date);
+                doc.setStoragePath(text);
+
+                dao.updateDocument(doc);
             }
         }).start();
     }

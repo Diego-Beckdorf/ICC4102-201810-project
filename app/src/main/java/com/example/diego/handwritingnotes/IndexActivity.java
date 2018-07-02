@@ -11,6 +11,7 @@ import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListAdapter;
@@ -27,6 +28,7 @@ import com.example.diego.handwritingnotes.utils.APIManager;
 import java.text.DateFormat;
 import java.text.Normalizer;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -34,6 +36,7 @@ public class IndexActivity extends AppCompatActivity {
     private static final String DATABASE_NAME = "app_db";
     private AppDatabase appDatabase;
     static final int REQUEST_IMAGE_CAPTURE = 1;
+    private List<Integer> doc_list;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +62,7 @@ public class IndexActivity extends AppCompatActivity {
         newButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                newNoteIntent("");
+                newNoteIntent("", -1);
             }
         });
     }
@@ -75,14 +78,14 @@ public class IndexActivity extends AppCompatActivity {
             //apiManager.requestAPIProcess(imageBitmap);
             //TODO parse API response
             String text = apiManager.processAPIResponse();
-            //saveDocument(text);
-            newNoteIntent(text);
+            newNoteIntent(text, -1);
         }
     }
 
-    private void newNoteIntent(String text) {
+    private void newNoteIntent(String text, int doc_id) {
         Intent newNoteIntent = new Intent(IndexActivity.this, DocumentActivity.class);
         newNoteIntent.putExtra("text", text);
+        newNoteIntent.putExtra("doc_id", doc_id);
         startActivity(newNoteIntent);
         finish();
     }
@@ -98,6 +101,12 @@ public class IndexActivity extends AppCompatActivity {
         ListAdapter listAdapter = new DocumentListAdapter(this, documents);
         ListView documentsListView = findViewById(R.id.documents_list);
         documentsListView.setAdapter(listAdapter);
+        documentsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                newNoteIntent("", doc_list.get((int)id));
+            }
+        });
     }
 
     public void getDocuments() {
@@ -105,6 +114,10 @@ public class IndexActivity extends AppCompatActivity {
             @Override
             public void handleMessage(Message msg) {
                 List<Document> documents = (List<Document>) msg.obj;
+                doc_list = new ArrayList<Integer>();
+                for (int i=0; i<documents.size(); i++){
+                    doc_list.add((int)documents.get(i).getDocumentId());
+                }
                 fillDocumentsList(documents);
             }
         };
