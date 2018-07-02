@@ -60,7 +60,7 @@ public class IndexActivity extends AppCompatActivity {
             Toast.makeText(this, "Sending image to API", Toast.LENGTH_LONG).show();
             //TODO async task required
             APIManager apiManager = new APIManager();
-            //apiManager.requestAPIProcess(imageBitmap);
+            apiManager.requestAPIProcess(imageBitmap);
             //TODO parse API response
             String text = apiManager.processAPIResponse();
             saveDocument(text);
