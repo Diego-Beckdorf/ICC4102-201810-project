@@ -1,6 +1,7 @@
 package com.example.diego.handwritingnotes;
 
 import android.annotation.SuppressLint;
+import android.arch.persistence.room.Index;
 import android.arch.persistence.room.Room;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -23,7 +24,10 @@ import com.example.diego.handwritingnotes.database_orm.Document;
 import com.example.diego.handwritingnotes.layout_helpers.DocumentListAdapter;
 import com.example.diego.handwritingnotes.utils.APIManager;
 
+import java.text.DateFormat;
 import java.text.Normalizer;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.List;
 
 public class IndexActivity extends AppCompatActivity {
@@ -50,6 +54,14 @@ public class IndexActivity extends AppCompatActivity {
                 dispatchTakePictureIntent();
             }
         });
+
+        Button newButton = findViewById(R.id.new_note);
+        newButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                newNoteIntent("");
+            }
+        });
     }
 
     @Override
@@ -63,21 +75,16 @@ public class IndexActivity extends AppCompatActivity {
             //apiManager.requestAPIProcess(imageBitmap);
             //TODO parse API response
             String text = apiManager.processAPIResponse();
-            saveDocument(text);
+            //saveDocument(text);
+            newNoteIntent(text);
         }
-        getDocuments();
     }
 
-    public void saveDocument(String text){
-        final String st = text;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                DaoAccess dao = appDatabase.daoAccess();
-                Document d = new Document(st, "01", "01");
-                dao.insertDocument(d);
-            }
-        }).start();
+    private void newNoteIntent(String text) {
+        Intent newNoteIntent = new Intent(IndexActivity.this, DocumentActivity.class);
+        newNoteIntent.putExtra("text", text);
+        startActivity(newNoteIntent);
+        finish();
     }
 
     private void dispatchTakePictureIntent() {
