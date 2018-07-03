@@ -1,6 +1,13 @@
 package com.example.diego.handwritingnotes.utils;
 
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.util.LruCache;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.ImageLoader;
+import com.android.volley.toolbox.Volley;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -22,6 +29,11 @@ import org.json.JSONObject;
 
 public class APIManager {
 
+    private static APIManager mAPIManagerInstance;
+    private RequestQueue mRequestQueue;
+    private ImageLoader mImageLoader;
+    private static Context mContext;
+
     private static final String subscriptionKey = "<Subscription Key>";
 
     private static final String uriBase =
@@ -31,8 +43,56 @@ public class APIManager {
             "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/" +
                     "Cursive_Writing_on_Notebook_paper.jpg/800px-Cursive_Writing_on_Notebook_paper.jpg";
 
-    public String processAPIResponse() {
-        return "Testo de la imagen";
+    private APIManager(Context context) {
+        mContext = context;
+        mRequestQueue = getRequestQueue();
+
+        mImageLoader = new ImageLoader(mRequestQueue,
+                new ImageLoader.ImageCache() {
+                    private final LruCache<String, Bitmap>
+                            cache = new LruCache<String, Bitmap>(20);
+
+                    @Override
+                    public Bitmap getBitmap(String url) {
+                        return cache.get(url);
+                    }
+
+                    @Override
+                    public void putBitmap(String url, Bitmap bitmap) {
+                        cache.put(url, bitmap);
+                    }
+                });
+    }
+
+    public static synchronized APIManager getInstance(Context context) {
+        if (mAPIManagerInstance == null) {
+            mAPIManagerInstance = new APIManager(context);
+        }
+        return mAPIManagerInstance;
+    }
+
+    public RequestQueue getRequestQueue() {
+        if (mRequestQueue == null) {
+            // getApplicationContext() is key, it keeps you from leaking the
+            // Activity or BroadcastReceiver if someone passes one in.
+            mRequestQueue = Volley.newRequestQueue(mContext.getApplicationContext());
+        }
+        return mRequestQueue;
+    }
+
+    public <T> void addToRequestQueue(Request<T> req,String tag) {
+        req.setTag(tag);
+        getRequestQueue().add(req);
+    }
+
+    public ImageLoader getImageLoader() {
+        return mImageLoader;
+    }
+
+    public void cancelPendingRequests(Object tag) {
+        if (mRequestQueue != null) {
+            mRequestQueue.cancelAll(tag);
+        }
     }
 
     public void requestAPIProcess(Bitmap image) {
@@ -55,7 +115,7 @@ public class APIManager {
             HttpPost request = new HttpPost(uri);
 
             // Request headers.
-            request.setHeader("Content-Type", "application/octet-stream instead");
+            request.setHeader("Content-Type", "application/octet-stream");
             request.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();

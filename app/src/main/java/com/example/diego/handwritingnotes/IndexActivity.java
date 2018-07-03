@@ -1,7 +1,6 @@
 package com.example.diego.handwritingnotes;
 
 import android.annotation.SuppressLint;
-import android.arch.persistence.room.Index;
 import android.arch.persistence.room.Room;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -13,30 +12,40 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
 import com.example.diego.handwritingnotes.database.AppDatabase;
 import com.example.diego.handwritingnotes.database_interface.DaoAccess;
 import com.example.diego.handwritingnotes.database_orm.Document;
 import com.example.diego.handwritingnotes.layout_helpers.DocumentListAdapter;
 import com.example.diego.handwritingnotes.utils.APIManager;
 
-import java.text.DateFormat;
-import java.text.Normalizer;
-import java.text.SimpleDateFormat;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class IndexActivity extends AppCompatActivity {
     private static final String DATABASE_NAME = "app_db";
     private AppDatabase appDatabase;
     static final int REQUEST_IMAGE_CAPTURE = 1;
     private List<Integer> doc_list;
+
+    private static final String subscriptionKey = "93b117483ad447c4bf14969976c7a7d1";
+
+    private static final String uriBase =
+            "https://southcentralus.api.cognitive.microsoft.com/vision/v1.0/recognizeText";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,14 +81,16 @@ public class IndexActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
-            Toast.makeText(this, "Sending image to API", Toast.LENGTH_LONG).show();
-            //TODO async task required
-            APIManager apiManager = new APIManager();
-            apiManager.requestAPIProcess(imageBitmap);
-            //TODO parse API response
-            String text = apiManager.processAPIResponse();
-            newNoteIntent(text, -1);
+            //TODO uploadBitmap(imageBitmap);
+
+            newNoteIntent("caca", -1);
         }
+    }
+
+    public byte[] getFileDataFromDrawable(Bitmap bitmap) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 80, byteArrayOutputStream);
+        return byteArrayOutputStream.toByteArray();
     }
 
     private void newNoteIntent(String text, int doc_id) {
