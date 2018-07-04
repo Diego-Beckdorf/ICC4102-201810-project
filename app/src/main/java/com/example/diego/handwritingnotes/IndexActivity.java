@@ -23,10 +23,15 @@ import com.example.diego.handwritingnotes.layout_helpers.DocumentListAdapter;
 import com.example.diego.handwritingnotes.utils.ImageService;
 import com.example.diego.handwritingnotes.utils.TextService;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,18 +91,19 @@ public class IndexActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
+            String defaultText = "Default text. Prabably could not reach API";
             try {
-                uploadBitmap(imageBitmap);
+                uploadBitmap(imageBitmap, defaultText);
             } catch (IOException e) {
-                Toast.makeText(IndexActivity.this, "Image IO ailed", Toast.LENGTH_SHORT).show();
+                Toast.makeText(IndexActivity.this, "Image IO Failed", Toast.LENGTH_SHORT).show();
                 e.printStackTrace();
             }
 
-            newNoteIntent("caca", -1);
+            newNoteIntent("Default text. An error has occurred", -1);
         }
     }
 
-    public void uploadBitmap(Bitmap bitmap) throws IOException {
+    public void uploadBitmap(Bitmap bitmap, final String defaultText) throws IOException {
         imageService = new Retrofit.Builder().baseUrl(uriBase)
                 .build().create(ImageService.class);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -119,38 +125,55 @@ public class IndexActivity extends AppCompatActivity {
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (!response.isSuccessful()) {
                     Toast.makeText(IndexActivity.this, "Failed sending image! Unsuccessful request", Toast.LENGTH_LONG).show();
+                    newNoteIntent(defaultText, -1);
                     return;
                 }
                 String operationLocation = response.headers().get("Operation-Location");
                 if (operationLocation.isEmpty()) {
                     Toast.makeText(IndexActivity.this, "Failed sending image! No Operation Location", Toast.LENGTH_LONG).show();
+                    newNoteIntent(defaultText, -1);
                     return;
                 }
-                requestText(operationLocation);
+                requestText(operationLocation, defaultText);
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 Toast.makeText(IndexActivity.this, "Failed", Toast.LENGTH_SHORT).show();
+                newNoteIntent(defaultText, -1);
                 t.printStackTrace();
             }
         });
     }
 
-    public void requestText(String operationLocation) {
+    public void requestText(String operationLocation, final String defaultText) {
+        final String[] content = new String[1];
         textService = new Retrofit.Builder().baseUrl(operationLocation)
                 .build().create(TextService.class);
         retrofit2.Call<okhttp3.ResponseBody> textReq = textService.getImageText();
         textReq.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                //TODO get response json with text
-                Toast.makeText(IndexActivity.this, response.body().toString(), Toast.LENGTH_SHORT).show();
+                if (!response.isSuccessful()) {
+                    Toast.makeText(IndexActivity.this, "Failed to retrieve text! Unsuccessful request", Toast.LENGTH_LONG).show();
+                    newNoteIntent(defaultText, -1);
+                    return;
+                }
+                JSONObject JSONResponse;
+                try {
+                    JSONResponse = new JSONObject(response.body().toString());
+                } catch (JSONException e) {
+                    Toast.makeText(IndexActivity.this, "Failed to retrieve text! Unsuported json", Toast.LENGTH_LONG).show();
+                    newNoteIntent(defaultText, -1);
+                }
+                newNoteIntent(response.body().toString(), -1);
+                Toast.makeText(IndexActivity.this, "Success", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 Toast.makeText(IndexActivity.this, "Failed", Toast.LENGTH_SHORT).show();
+                newNoteIntent(defaultText, -1);
                 t.printStackTrace();
             }
         });
