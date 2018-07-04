@@ -1,7 +1,9 @@
 package com.example.diego.handwritingnotes.utils;
 
 import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
+import retrofit2.http.Body;
 import retrofit2.http.Headers;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
@@ -16,7 +18,6 @@ public interface ImageService {
             "Ocp-Apim-Subscription-Key: 93b117483ad447c4bf14969976c7a7d1",
             "Content-Type: application/octet-stream"
     })
-    @Multipart
-    @POST("/")
-    Call<okhttp3.ResponseBody> postImage(@Part MultipartBody.Part image);
+    @POST("vision/v1.0/recognizeText/")
+    Call<okhttp3.ResponseBody> postImage(@Body RequestBody image);
 }

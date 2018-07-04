@@ -9,6 +9,7 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
@@ -23,6 +24,7 @@ import com.example.diego.handwritingnotes.layout_helpers.DocumentListAdapter;
 import com.example.diego.handwritingnotes.utils.ImageService;
 import com.example.diego.handwritingnotes.utils.TextService;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -55,7 +57,7 @@ public class IndexActivity extends AppCompatActivity {
     TextService textService;
     private static final String subscriptionKey = "93b117483ad447c4bf14969976c7a7d1";
     private static final String uriBase =
-            "https://southcentralus.api.cognitive.microsoft.com/vision/v1.0/recognizeText/";
+            "https://southcentralus.api.cognitive.microsoft.com/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,9 +99,8 @@ public class IndexActivity extends AppCompatActivity {
             } catch (IOException e) {
                 Toast.makeText(IndexActivity.this, "Image IO Failed", Toast.LENGTH_SHORT).show();
                 e.printStackTrace();
+                newNoteIntent("Default text. An error has occurred", -1);
             }
-
-            newNoteIntent("Default text. An error has occurred", -1);
         }
     }
 
@@ -110,16 +111,9 @@ public class IndexActivity extends AppCompatActivity {
         bitmap.compress(Bitmap.CompressFormat.PNG, 0 /*ignored for PNG*/, bos);
         byte[] bitmapdata = bos.toByteArray();
 
-        File file = new File(this.getCacheDir(), "temp.png");
-        file.createNewFile();
-        FileOutputStream fos = new FileOutputStream(file);
-        fos.write(bitmapdata);
-        fos.flush();
-        fos.close();
-        RequestBody reqFile = RequestBody.create(MediaType.parse("image/*"), file);
-        MultipartBody.Part body = MultipartBody.Part.createFormData("upload", file.getName(), reqFile);
+        RequestBody reqFile = RequestBody.create(MediaType.parse("image"), bitmapdata);
 
-        retrofit2.Call<ResponseBody> req = imageService.postImage(body);
+        retrofit2.Call<ResponseBody> req = imageService.postImage(reqFile);
         req.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -148,25 +142,42 @@ public class IndexActivity extends AppCompatActivity {
 
     public void requestText(String operationLocation, final String defaultText) {
         final String[] content = new String[1];
-        textService = new Retrofit.Builder().baseUrl(operationLocation)
+        textService = new Retrofit.Builder().baseUrl(operationLocation+"/")
                 .build().create(TextService.class);
-        retrofit2.Call<okhttp3.ResponseBody> textReq = textService.getImageText();
+        retrofit2.Call<okhttp3.ResponseBody> textReq = textService.getImageText(operationLocation+"/");
         textReq.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (!response.isSuccessful()) {
+                    Log.i("response-fail", response.raw().toString());
                     Toast.makeText(IndexActivity.this, "Failed to retrieve text! Unsuccessful request", Toast.LENGTH_LONG).show();
                     newNoteIntent(defaultText, -1);
                     return;
                 }
-                JSONObject JSONResponse;
+                String responseString = "";
                 try {
-                    JSONResponse = new JSONObject(response.body().toString());
-                } catch (JSONException e) {
-                    Toast.makeText(IndexActivity.this, "Failed to retrieve text! Unsuported json", Toast.LENGTH_LONG).show();
-                    newNoteIntent(defaultText, -1);
+                    responseString = response.body().string();
+                } catch (IOException e) {
+                    Log.i("response-body", "murio");
+                    e.printStackTrace();
+                    return;
                 }
-                newNoteIntent(response.body().toString(), -1);
+                String content = "";
+                try {
+                    JSONObject json = new JSONObject(responseString);
+                    JSONObject result = (JSONObject) json.get("recognitionResult");
+                    JSONArray lines = result.getJSONArray("lines");
+                    for (int i = 0 ; i < lines.length(); i++) {
+                        JSONObject obj = lines.getJSONObject(i);
+                        content = content.concat(" " + obj.getString("text"));
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                if (content == "") {
+                    content = "No text identified";
+                }
+                newNoteIntent(content, -1);
                 Toast.makeText(IndexActivity.this, "Success", Toast.LENGTH_SHORT).show();
             }
 
