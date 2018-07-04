@@ -16,25 +16,28 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.NetworkResponse;
-import com.android.volley.Request;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.example.diego.handwritingnotes.database.AppDatabase;
 import com.example.diego.handwritingnotes.database_interface.DaoAccess;
 import com.example.diego.handwritingnotes.database_orm.Document;
 import com.example.diego.handwritingnotes.layout_helpers.DocumentListAdapter;
-import com.example.diego.handwritingnotes.utils.APIManager;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.example.diego.handwritingnotes.utils.ImageService;
+import com.example.diego.handwritingnotes.utils.TextService;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 public class IndexActivity extends AppCompatActivity {
     private static final String DATABASE_NAME = "app_db";
@@ -42,10 +45,12 @@ public class IndexActivity extends AppCompatActivity {
     static final int REQUEST_IMAGE_CAPTURE = 1;
     private List<Integer> doc_list;
 
-    private static final String subscriptionKey = "93b117483ad447c4bf14969976c7a7d1";
 
+    ImageService imageService;
+    TextService textService;
+    private static final String subscriptionKey = "93b117483ad447c4bf14969976c7a7d1";
     private static final String uriBase =
-            "https://southcentralus.api.cognitive.microsoft.com/vision/v1.0/recognizeText";
+            "https://southcentralus.api.cognitive.microsoft.com/vision/v1.0/recognizeText/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,10 +86,74 @@ public class IndexActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
-            //TODO uploadBitmap(imageBitmap);
+            try {
+                uploadBitmap(imageBitmap);
+            } catch (IOException e) {
+                Toast.makeText(IndexActivity.this, "Image IO ailed", Toast.LENGTH_SHORT).show();
+                e.printStackTrace();
+            }
 
             newNoteIntent("caca", -1);
         }
+    }
+
+    public void uploadBitmap(Bitmap bitmap) throws IOException {
+        imageService = new Retrofit.Builder().baseUrl(uriBase)
+                .build().create(ImageService.class);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 0 /*ignored for PNG*/, bos);
+        byte[] bitmapdata = bos.toByteArray();
+
+        File file = new File(this.getCacheDir(), "temp.png");
+        file.createNewFile();
+        FileOutputStream fos = new FileOutputStream(file);
+        fos.write(bitmapdata);
+        fos.flush();
+        fos.close();
+        RequestBody reqFile = RequestBody.create(MediaType.parse("image/*"), file);
+        MultipartBody.Part body = MultipartBody.Part.createFormData("upload", file.getName(), reqFile);
+
+        retrofit2.Call<ResponseBody> req = imageService.postImage(body);
+        req.enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(IndexActivity.this, "Failed sending image! Unsuccessful request", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                String operationLocation = response.headers().get("Operation-Location");
+                if (operationLocation.isEmpty()) {
+                    Toast.makeText(IndexActivity.this, "Failed sending image! No Operation Location", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                requestText(operationLocation);
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                Toast.makeText(IndexActivity.this, "Failed", Toast.LENGTH_SHORT).show();
+                t.printStackTrace();
+            }
+        });
+    }
+
+    public void requestText(String operationLocation) {
+        textService = new Retrofit.Builder().baseUrl(operationLocation)
+                .build().create(TextService.class);
+        retrofit2.Call<okhttp3.ResponseBody> textReq = textService.getImageText();
+        textReq.enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                //TODO get response json with text
+                Toast.makeText(IndexActivity.this, response.body().toString(), Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                Toast.makeText(IndexActivity.this, "Failed", Toast.LENGTH_SHORT).show();
+                t.printStackTrace();
+            }
+        });
     }
 
     public byte[] getFileDataFromDrawable(Bitmap bitmap) {
