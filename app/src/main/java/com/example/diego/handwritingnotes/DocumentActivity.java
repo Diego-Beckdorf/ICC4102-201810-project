@@ -84,10 +84,15 @@ public class DocumentActivity extends AppCompatActivity {
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                //TODO share action.
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+            public void onClick(View v) {
+                final EditText content = (EditText) findViewById(R.id.document_content);
+
+                final Intent emailIntent = new Intent(android.content.Intent.ACTION_SEND);
+                emailIntent.setType("plain/text");
+                emailIntent.putExtra(android.content.Intent.EXTRA_EMAIL, new String[]{""});
+                emailIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "");
+                emailIntent.putExtra(android.content.Intent.EXTRA_TEXT, content.getText().toString());
+                getApplicationContext().startActivity(Intent.createChooser(emailIntent, "Send mail..."));
             }
         });
     }
